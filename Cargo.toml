@@ -1,0 +1,9 @@
+[package]
+name = "interpolate"
+version = "0.1.0"
+authors = ["Anthony Nowell <anowell@gmail.com>"]
+
+[lib]
+crate-type = ["proc-macro"]
+
+[dependencies]
