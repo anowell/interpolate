@@ -4,10 +4,13 @@
 
 //! A simple form of Rust string interpolation
 //!
-//! interpolate provides basic string interpolation
+//! `interpolate` provides basic string interpolation
 //! functionality with a very light-weight syntax.
 //!
+//! Note: `interpolate` currently requires experimental proc_macro functionality in nightly.
+//!
 //! ```no_run
+//! #![feature(proc_macro)]
 //! use interpolate::s;
 //!
 //! let name = "Hercules";
