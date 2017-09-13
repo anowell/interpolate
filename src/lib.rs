@@ -2,6 +2,21 @@
 #![feature(rustc_private)]
 #![crate_type = "proc-macro"]
 
+//! A simple form of Rust string interpolation
+//!
+//! interpolate provides basic string interpolation
+//! functionality with a very light-weight syntax.
+//!
+//! ```no_run
+//! use interpolate::s;
+//!
+//! let name = "Hercules";
+//! let greet = s!("Hello, $name");
+//! let sos = s!("HELP, ${name.to_uppercase()}");
+//! ```
+//!
+//! That is all.
+
 extern crate proc_macro;
 
 use std::str::FromStr;
@@ -86,6 +101,7 @@ fn split_interpolate(text: &str) -> (&str, &str, &str) {
     )}
 }
 
+/// Inline interpolation macro
 #[proc_macro]
 pub fn s(input: TokenStream) -> TokenStream {
     let mut trees = input.into_iter();
@@ -143,15 +159,5 @@ pub fn s(input: TokenStream) -> TokenStream {
     tokens.push( quote!{ out } );
     let stream = TokenStream::from_iter(tokens);
     quote!({ $stream })
-}
-
-#[proc_macro]
-pub fn sprintln(input: TokenStream) -> TokenStream {
-    let interpolated = s(input);
-
-    // TODO: figure out 'Could not find `std` in `{{root}}`' error
-    quote! {
-        // println!("{}", $interpolated);
-    }
 }
 
