@@ -9,7 +9,7 @@
 //! use interpolate::s;
 //!
 //! let name = "Hercules";
-//! let greet = s!("Hello, $name");
+//! let greet = s!("Hello, {name}");
 //! let sos = s!("HELP, {name.to_uppercase()}");
 //! ```
 //!
@@ -17,12 +17,9 @@
 
 extern crate proc_macro;
 extern crate proc_macro2;
-extern crate unicode_xid;
-//use proc_macro::quote;
 #[macro_use] extern crate quote;
 
 use proc_macro::{TokenStream, TokenTree};
-use unicode_xid::UnicodeXID;
 use std::str::FromStr;
 
 // Simple state machine for the current part of string being processed
@@ -30,12 +27,10 @@ use std::str::FromStr;
 enum Position {
     // Any literal text that precedes a '$' interpolation
     Literal,
-    // The delimeter(s) starting the interpolation, e.g., `$` or `${`
+    // The delimeter(s) starting the interpolation, e.g., `{`
     ExpressionDelim,
-    // An interpolation expression wrapped in braces, e.g., `${foo}`
+    // An interpolation expression wrapped in braces, e.g., `{foo}`
     ExpressionWrapped,
-    // An interpolation expression without the braces, e.g., `$foo`
-    ExpressionBare,
     // Everything following the interpolation expression
     // (which may or may not contain additional expressions to interpolate)
     Rest,
@@ -48,7 +43,7 @@ enum Position {
 //   if expression is empty, there are no expressions
 //   if remainder is empty, then we've reached the end of the string
 #[allow(unstable_name_collisions)]
-fn split_interpolate(text: &str) -> (&str, &str, &str) {
+fn split_interpolate(text: &str) -> (String, String, &str) {
     let mut state = Position::Literal;
 
     // Walk the string finding indexes for:
@@ -60,31 +55,27 @@ fn split_interpolate(text: &str) -> (&str, &str, &str) {
         = (text.len(), text.len(), text.len(), text.len());
     for (i, c) in text.char_indices() {
         match state {
-            Position::Literal if c == '$' => {
+            Position::Literal if c == '{' => {
                 state = Position::ExpressionDelim;
                 delim = i;
             }
             Position::ExpressionDelim if c == '{' => {
-                state = Position::ExpressionWrapped;
-                exp_start =  i + 1;
-            }
-            Position::ExpressionDelim if !c.is_xid_start() && c != '_' => {
-                let msg = format!("Expected valid identifier or expression. Found '${}'.", c);
-                panic!(msg);
+                state = Position::Literal;
+                delim = text.len();
             }
             Position::ExpressionDelim => {
-                state = Position::ExpressionBare;
+                state = Position::ExpressionWrapped;
                 exp_start = i;
             }
             Position::ExpressionWrapped if c == '}' => {
                 state = Position::Rest;
                 exp_end = i;
-                rest = i + 1;
-                break;
             }
-            Position::ExpressionBare if !c.is_xid_continue() => {
-                state = Position::Rest;
-                exp_end = i;
+            Position::Rest if c == '}' => {
+                state = Position::ExpressionWrapped;
+                exp_end = text.len();
+            }
+            Position::Rest => {
                 rest = i;
                 break;
             }
@@ -98,8 +89,8 @@ fn split_interpolate(text: &str) -> (&str, &str, &str) {
     }
 
     unsafe {(
-        text.get_unchecked(..delim),
-        text.get_unchecked(exp_start..exp_end),
+        text.get_unchecked(..delim).replace("{{", "{").replace("}}", "}"),
+        text.get_unchecked(exp_start..exp_end).replace("{{", "{").replace("}}", "}"),
         text.get_unchecked(rest..),
     )}
 }
@@ -145,7 +136,7 @@ pub fn s(input: TokenStream) -> TokenStream {
        // Process any interpolation expression
        if raw_exp.len() > 0 {
            //println!("raw_exp: {:?}", raw_exp);
-           let exp = proc_macro2::TokenStream::from_str(raw_exp).expect("not a valid token stream");
+           let exp = proc_macro2::TokenStream::from_str(&raw_exp).expect("not a valid token stream");
            tokens.extend(quote! { out.push_str(&#exp.to_string()); });
        }
 
