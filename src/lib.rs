@@ -1,30 +1,29 @@
-#![feature(proc_macro)]
-#![feature(rustc_private)]
 #![crate_type = "proc-macro"]
-
 //! A simple form of Rust string interpolation
 //!
 //! `interpolate` provides basic string interpolation
 //! functionality with a very light-weight syntax.
 //!
-//! Note: `interpolate` currently requires experimental proc_macro functionality in nightly.
-//!
 //! ```no_run
-//! #![feature(proc_macro)]
+//! #![feature(use_extern_macros, prox_macro_non_items)]
 //! use interpolate::s;
 //!
 //! let name = "Hercules";
 //! let greet = s!("Hello, $name");
-//! let sos = s!("HELP, ${name.to_uppercase()}");
+//! let sos = s!("HELP, {name.to_uppercase()}");
 //! ```
 //!
 //! That is all.
 
 extern crate proc_macro;
+extern crate proc_macro2;
+extern crate unicode_xid;
+//use proc_macro::quote;
+#[macro_use] extern crate quote;
 
+use proc_macro::{TokenStream, TokenTree};
+use unicode_xid::UnicodeXID;
 use std::str::FromStr;
-use std::iter::FromIterator;
-use proc_macro::{TokenStream, TokenNode, Literal, quote};
 
 // Simple state machine for the current part of string being processed
 #[derive(Debug, Copy, Clone)]
@@ -48,6 +47,7 @@ enum Position {
 //   if literal is empty, the text starts with an expression
 //   if expression is empty, there are no expressions
 //   if remainder is empty, then we've reached the end of the string
+#[allow(unstable_name_collisions)]
 fn split_interpolate(text: &str) -> (&str, &str, &str) {
     let mut state = Position::Literal;
 
@@ -114,40 +114,39 @@ pub fn s(input: TokenStream) -> TokenStream {
     }
     // TODO: panic if multiple tokens
 
-    let text = match tree.kind {
-       TokenNode::Literal(lit) => lit.to_string(),
+    let text = match tree {
+       TokenTree::Literal(lit) => lit.to_string(),
        _ => panic!("macro only accepts a single string literal"),
     };
 
-    let mut tokens: Vec<TokenStream> = Vec::new();
+    let mut tokens = proc_macro2::TokenStream::new();
 
     let first_quote = text.find('"')
         .expect("macro only accepts a single string literal");
     if first_quote != 0 {
-        panic!("macro does not accest raw string literals");
+        panic!("macro does not accept raw string literals");
     }
     let mut text = unsafe { text.get_unchecked(1..(text.len()-1)) };
 
-    tokens.push(quote!{
+    tokens.extend(quote!{
         let mut out = String::new();
     });
 
     loop {
-       // println!("ITER: {}", text);
+       //println!("ITER: {}", text);
        let (raw_lit, raw_exp, rest) = split_interpolate(&text);
 
        // Process any literal
        if raw_lit.len() > 0 {
-           let lit = TokenNode::Literal(Literal::string(raw_lit));
-           tokens.push(quote! { out.push_str($lit); });
+           //println!("raw_lit: {}", raw_lit);
+           tokens.extend(quote! { out.push_str(#raw_lit); });
        }
 
        // Process any interpolation expression
        if raw_exp.len() > 0 {
-           let exp = TokenStream::from_str(raw_exp)
-               .expect("Interpolated block is not a valid expression");
-
-           tokens.push(quote! { out.push_str(&$exp.to_string()); });
+           //println!("raw_exp: {:?}", raw_exp);
+           let exp = proc_macro2::TokenStream::from_str(raw_exp).expect("not a valid token stream");
+           tokens.extend(quote! { out.push_str(&#exp.to_string()); });
        }
 
        // Process the rest of the string (if any)
@@ -159,8 +158,8 @@ pub fn s(input: TokenStream) -> TokenStream {
     }
 
     // Return the `out` variable initialized and wrap the entire token stream in a block
-    tokens.push( quote!{ out } );
-    let stream = TokenStream::from_iter(tokens);
-    quote!({ $stream })
+    tokens.extend( quote!{ out } );
+    //let stream = TokenStream::from_iter(tokens);
+    quote!({ #tokens }).into()
 }
 

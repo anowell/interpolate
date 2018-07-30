@@ -1,6 +1,6 @@
 [package]
 name = "interpolate"
-version = "0.1.1"
+version = "0.1.2"
 license = "MIT"
 authors = ["Anthony Nowell <anowell@gmail.com>"]
 
@@ -13,3 +13,6 @@ readme = "README.md"
 crate-type = ["proc-macro"]
 
 [dependencies]
+proc-macro2 = "0.4.9"
+quote = "0.6.4"
+unicode-xid = "0.1.0"

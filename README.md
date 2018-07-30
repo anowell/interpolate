@@ -18,7 +18,7 @@ use interpolate::s;
 
 let name = "Jane";
 let fav_num = 32;
-let greeting = s!("$name's favorite number is $fav_num);
+let greeting = s!("$name's favorite number is $fav_num");
 ```
 
 

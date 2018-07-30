@@ -1,4 +1,4 @@
-#![feature(proc_macro)]
+#![feature(use_extern_macros, proc_macro_non_items)]
 #![feature(non_ascii_idents)]
 
 extern crate interpolate;
