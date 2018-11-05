@@ -15,11 +15,11 @@
 //!
 //! That is all.
 
-extern crate proc_macro;
-extern crate proc_macro2;
-#[macro_use] extern crate quote;
+#![feature(proc_macro_hygiene, proc_macro_quote)]
 
-use proc_macro::{TokenStream, TokenTree};
+extern crate proc_macro;
+
+use proc_macro::{TokenStream, TokenTree, quote};
 use std::str::FromStr;
 
 // Simple state machine for the current part of string being processed
@@ -39,7 +39,7 @@ enum Position {
 #[derive(Default)]
 struct FmtArgs {
    fmt: String,
-   args: Vec<proc_macro2::TokenStream>,
+   args: Vec<proc_macro::TokenStream>,
 }
 impl FmtArgs {
     fn new() -> FmtArgs {
@@ -96,7 +96,7 @@ fn split_interpolate(text: &str) -> FmtArgs {
                 fmt_args.fmt.push_str(lit);
                 fmt_args.fmt.push_str("{}");
                 fmt_args.args.push(
-                    proc_macro2::TokenStream::from_str(&arg).expect("interpolation expression is not a valid token stream")
+                    proc_macro::TokenStream::from_str(&arg).expect("interpolation expression is not a valid token stream")
                 );
                 lit_start = i;
                 if c == '{' {
@@ -121,7 +121,7 @@ fn split_interpolate(text: &str) -> FmtArgs {
             fmt_args.fmt.push_str(lit);
             fmt_args.fmt.push_str("{}");
             fmt_args.args.push(
-                proc_macro2::TokenStream::from_str(&arg).expect("interpolation expression is not a valid token stream")
+                proc_macro::TokenStream::from_str(&arg).expect("interpolation expression is not a valid token stream")
             );
         },
         Position::Literal => {
@@ -162,15 +162,17 @@ fn parse_args(input: TokenStream) -> FmtArgs {
 
 /// Inline interpolation macro
 #[proc_macro]
+#[allow(unused_variables)]
 pub fn s(input: TokenStream) -> TokenStream {
     let FmtArgs { fmt, args } = parse_args(input);
-    quote!({ format!(#fmt, #(#args),*) }).into()
+    quote!({ format!(#fmt, #(#args),*) })
 }
 
 /// Inline interpolating printing macro
 #[proc_macro]
+#[allow(unused_variables)]
 pub fn p(input: TokenStream) -> TokenStream {
     let FmtArgs { fmt, args } = parse_args(input);
-    quote!({ println!(#fmt, #(#args),*) }).into()
+    quote!({ println!(#fmt, #(#args),*) })
 }
 
