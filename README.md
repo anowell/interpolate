@@ -13,7 +13,7 @@ A simple form of Rust string interpolation, e.g., `s!("Today is {date}")`.
 Note: `interpolate` currently requires some experimental functionality in nightly.
 
 ```rust
-#![feature(use_extern_macros, proc_macro)]
+#![feature(proc_macro_hygiene)]
 use interpolate::s;
 
 let name = "Jane";
