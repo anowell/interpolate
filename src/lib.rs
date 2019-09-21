@@ -19,7 +19,7 @@
 
 extern crate proc_macro;
 
-use proc_macro::{TokenStream, TokenTree, quote};
+use proc_macro::{quote, TokenStream, TokenTree};
 use std::str::FromStr;
 
 // Simple state machine for the current part of string being processed
@@ -38,8 +38,8 @@ enum Position {
 
 #[derive(Default)]
 struct FmtArgs {
-   fmt: String,
-   args: Vec<proc_macro::TokenStream>,
+    fmt: String,
+    args: Vec<proc_macro::TokenStream>,
 }
 impl FmtArgs {
     fn new() -> FmtArgs {
@@ -63,8 +63,8 @@ fn split_interpolate(text: &str) -> FmtArgs {
     //   exp_end: the index immediately after the last char of the expression
     //   rest: the index of the first character of the rest of the string
     let mut fmt_args = FmtArgs::new();
-    let (mut lit_start, mut delim, mut exp_start, mut exp_end)
-        = (0, text.len(), text.len(), text.len());
+    let (mut lit_start, mut delim, mut exp_start, mut exp_end) =
+        (0, text.len(), text.len(), text.len());
 
     for (i, c) in text.char_indices() {
         match state {
@@ -89,14 +89,20 @@ fn split_interpolate(text: &str) -> FmtArgs {
                 exp_end = text.len();
             }
             Position::Rest => {
-                let (lit, arg) = unsafe {(
-                    text.get_unchecked(lit_start..delim),
-                    text.get_unchecked(exp_start..exp_end).trim().replace("{{", "{").replace("}}", "}"),
-                )};
+                let (lit, arg) = unsafe {
+                    (
+                        text.get_unchecked(lit_start..delim),
+                        text.get_unchecked(exp_start..exp_end)
+                            .trim()
+                            .replace("{{", "{")
+                            .replace("}}", "}"),
+                    )
+                };
                 fmt_args.fmt.push_str(lit);
                 fmt_args.fmt.push_str("{}");
                 fmt_args.args.push(
-                    proc_macro::TokenStream::from_str(&arg).expect("interpolation expression is not a valid token stream")
+                    proc_macro::TokenStream::from_str(&arg)
+                        .expect("interpolation expression is not a valid token stream"),
                 );
                 lit_start = i;
                 if c == '{' {
@@ -112,18 +118,26 @@ fn split_interpolate(text: &str) -> FmtArgs {
     }
 
     match state {
-        Position::ExpressionWrapped | Position::ExpressionDelim => panic!("Interpolated expression is not closed"),
+        Position::ExpressionWrapped | Position::ExpressionDelim => {
+            panic!("Interpolated expression is not closed")
+        }
         Position::Rest => {
-            let (lit, arg) = unsafe {(
-                text.get_unchecked(lit_start..delim),
-                text.get_unchecked(exp_start..exp_end).trim().replace("{{", "{").replace("}}", "}"),
-            )};
+            let (lit, arg) = unsafe {
+                (
+                    text.get_unchecked(lit_start..delim),
+                    text.get_unchecked(exp_start..exp_end)
+                        .trim()
+                        .replace("{{", "{")
+                        .replace("}}", "}"),
+                )
+            };
             fmt_args.fmt.push_str(lit);
             fmt_args.fmt.push_str("{}");
             fmt_args.args.push(
-                proc_macro::TokenStream::from_str(&arg).expect("interpolation expression is not a valid token stream")
+                proc_macro::TokenStream::from_str(&arg)
+                    .expect("interpolation expression is not a valid token stream"),
             );
-        },
+        }
         Position::Literal => {
             let lit = unsafe { text.get_unchecked(lit_start..) };
             fmt_args.fmt.push_str(lit);
@@ -136,26 +150,27 @@ fn split_interpolate(text: &str) -> FmtArgs {
     fmt_args
 }
 
-
 fn parse_args(input: TokenStream) -> FmtArgs {
     let mut trees = input.into_iter();
-    let tree = trees.next().expect("macro only accepts a single string literal");
+    let tree = trees
+        .next()
+        .expect("macro only accepts a single string literal");
     if let Some(_) = trees.next() {
         panic!("macro only accepts a single string literal");
     }
     // TODO: panic if multiple tokens
     let text = match tree {
-       TokenTree::Literal(lit) => lit.to_string(),
-       _ => panic!("macro only accepts a single string literal"),
+        TokenTree::Literal(lit) => lit.to_string(),
+        _ => panic!("macro only accepts a single string literal"),
     };
 
-
-    let first_quote = text.find('"')
+    let first_quote = text
+        .find('"')
         .expect("macro only accepts a single string literal");
     if first_quote != 0 {
         panic!("macro does not accept raw string literals");
     }
-    let text = unsafe { text.get_unchecked(1..(text.len()-1)) };
+    let text = unsafe { text.get_unchecked(1..(text.len() - 1)) };
 
     split_interpolate(&text)
 }
@@ -175,4 +190,3 @@ pub fn p(input: TokenStream) -> TokenStream {
     let FmtArgs { fmt, args } = parse_args(input);
     quote!({ println!(#fmt, #(#args),*) })
 }
-
