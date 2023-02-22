@@ -1,7 +1,9 @@
 Interpolate
 ==========
 
-A simple form of Rust string interpolation, e.g., `s!("Today is {date}")`.
+A simple form of Rust string interpolation, 
+
+Simple interpolation with format string literal, e.g., `f"Today is {date}"`.
 
 [Documentation](http://docs.rs/interpolate)
 
@@ -10,39 +12,41 @@ A simple form of Rust string interpolation, e.g., `s!("Today is {date}")`.
 
 ## Usage
 
-Note: `interpolate` currently requires some experimental functionality in nightly.
 
 ```rust
-#![feature(proc_macro_hygiene)]
-use interpolate::s;
+use interpolate::fstring;
 
-let name = "Jane";
-let fav_num = 32;
-let greeting = s!("{name}'s favorite number is {fav_num}");
+#[fstring]
+fn foo() {
+    let name = "Hercules";
+    let greet = f"Hello, {name}";
+}
 ```
 
-Escaping braces is accomplished similar to escaping other format strings in rust.
+- Starting with Edition 2021, the prefix literal is reserved syntax, so you have to add a space `f "Hello {name}"`.
+- The implementation simply changes `f"literal"` into `format!("literal")`.
+- The `[fstring]` annotation is needed on an [item](https://doc.rust-lang.org/reference/items.html) because this is implemented as an [attribute macro](https://doc.rust-lang.org/reference/procedural-macros.html#attribute-macros).
 
-> The literal characters { and } may be included in a string by preceding them with the same character. For example, the { character is escaped with {{ and the } character is escaped with }}.
 
 ## Idea
 
-The goal of interpolate is to provide basic string interpolation functionality with a very light-weight syntax.
-
-It is not:
-
-- A full replacement for `format!`, `println!`, and related macros
-- Capable of non-trivial formatting of types
-- Anything that requires extensive documentation
+The goal of interpolate was to explore basic string interpolation functionality with a very light-weight syntax.
 
 I created this after a working on a CLI tools where I used `format!` a LOT.
 I really wanted something lighter weight like Scala's `s"Today is $date"`, so
-I decided to experiment here, with the idea of possibly adding to the
-discussions around strings (like
-[allowing literals to be used as String](https://internals.rust-lang.org/t/pre-rfc-allowing-string-literals-to-be-either-static-str-or-string-similar-to-numeric-literals/5029)
-and [custom string literals](https://internals.rust-lang.org/t/pre-rfc-custom-string-literals/5037).
-I frequently find myself wondering if any of these ideas could have a more central role in rust:
+I decided to experiment here.
 
-- `println!("Hello {name}")` to basically mean `println!("Hello {name}", name=name)`
-- `let full_name = s"{first_name} {last_name}"` instead of `format!("{} {}", first_name, last_name)`
-- `let msg = s"Hello"` instead of `"Hello".to_string()`
+Originally it used `s!("Hi, {name}")`. To my delight, [Rust 1.58](https://blog.rust-lang.org/2022/01/13/Rust-1.58.0.html) started capturing identifiers in format strings, which basically meant this crate could be implemented in 2 lines:
+
+```
+pub use std::format as s;
+pub use std::println as p;
+```
+
+So I started experimenting with prefix literal syntax.
+
+
+Reference Material:
+- [allowing literals to be used as String](https://internals.rust-lang.org/t/pre-rfc-allowing-string-literals-to-be-either-static-str-or-string-similar-to-numeric-literals/5029)
+- [custom string literals](https://internals.rust-lang.org/t/pre-rfc-custom-string-literals/5037).
+- [RFC 3101 - Reserved Literal Prefixes](https://github.com/rust-lang/rfcs/blob/master/text/3101-reserved_prefixes.md)
