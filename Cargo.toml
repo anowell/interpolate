@@ -1,6 +1,6 @@
 [package]
 name = "interpolate"
-version = "0.2.3"
+version = "0.3.0"
 license = "MIT"
 authors = ["Anthony Nowell <anowell@gmail.com>"]
 
@@ -8,6 +8,7 @@ description = "A simple form of string interpolation"
 documentation = "http://docs.rs/interpolate"
 repository = "https://github.com/anowell/interpolate"
 readme = "README.md"
+edition = "2021"
 
 [lib]
 crate-type = ["proc-macro"]
